@@ -124,8 +124,8 @@ EOF
 # ============================================================
 log "Creating frontend systemd service..."
 
-# Install serve globally for the streamparty user
-sudo -u "$APP_USER" bash -c "cd $APP_DIR/frontend && npm install -g serve"
+# Install serve globally (script runs as root)
+npm install -g serve
 
 cat > /etc/systemd/system/streamparty-frontend.service << EOF
 [Unit]
