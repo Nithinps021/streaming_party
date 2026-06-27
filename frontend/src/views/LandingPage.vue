@@ -129,4 +129,22 @@ function joinRoom() {
 .join-action input {
   flex: 1;
 }
+
+@media (max-width: 480px) {
+  .hero-panel {
+    padding: 1.5rem;
+  }
+  
+  .title {
+    font-size: 2.5rem;
+  }
+  
+  .join-action {
+    flex-direction: column;
+  }
+  
+  .join-action button {
+    width: 100%;
+  }
+}
 </style>

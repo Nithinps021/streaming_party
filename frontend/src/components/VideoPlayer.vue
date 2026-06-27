@@ -9,6 +9,8 @@ const videoRef = ref(null)
 const wrapperRef = ref(null)
 const isUpdatingFromRemote = ref(false)
 const isFullscreen = ref(false)
+const isBuffering = ref(false)
+const lastSeekTime = ref(0)
 
 const videoSrc = computed(() => {
   return roomState.value?.video_url || ''
@@ -20,14 +22,20 @@ watch(roomState, (newState, oldState) => {
 
   isUpdatingFromRemote.value = true
 
-  // Sync time if difference is greater than 1 second
   const timeDiff = Math.abs(videoRef.value.currentTime - newState.current_time)
-  if (timeDiff > 1.0) {
+  const now = Date.now()
+
+  // Only seek if:
+  // - drift is significant (>3s) — tolerate small lag from mobile buffering
+  // - not currently buffering — seeking while buffering causes a stutter loop
+  // - haven't seeked in the last 3 seconds — debounce rapid state updates
+  if (timeDiff > 3.0 && !isBuffering.value && (now - lastSeekTime.value) > 3000) {
     videoRef.value.currentTime = newState.current_time
+    lastSeekTime.value = now
   }
 
-  // Sync play state
-  if (newState.is_playing && videoRef.value.paused) {
+  // Sync play state, but don't fight browser buffering
+  if (newState.is_playing && videoRef.value.paused && !isBuffering.value) {
     videoRef.value.play().catch(e => console.log('Autoplay prevented', e))
   } else if (!newState.is_playing && !videoRef.value.paused) {
     videoRef.value.pause()
@@ -35,7 +43,7 @@ watch(roomState, (newState, oldState) => {
 
   setTimeout(() => {
     isUpdatingFromRemote.value = false
-  }, 100)
+  }, 500)
 }, { deep: true })
 
 // Local events to send to server
@@ -46,7 +54,7 @@ function handlePlay() {
     if (!roomState.value?.is_playing) {
       isUpdatingFromRemote.value = true
       videoRef.value.pause()
-      setTimeout(() => { isUpdatingFromRemote.value = false }, 100)
+      setTimeout(() => { isUpdatingFromRemote.value = false }, 500)
     }
     return
   }
@@ -58,11 +66,11 @@ function handlePlay() {
 function handlePause() {
   if (isUpdatingFromRemote.value) return
   if (!isAdmin.value) {
-    // Non-admin: revert pause if server says video should be playing
-    if (roomState.value?.is_playing) {
+    // Non-admin: revert pause only if server says playing AND not buffering
+    if (roomState.value?.is_playing && !isBuffering.value) {
       isUpdatingFromRemote.value = true
       videoRef.value.play().catch(e => console.log('Autoplay prevented', e))
-      setTimeout(() => { isUpdatingFromRemote.value = false }, 100)
+      setTimeout(() => { isUpdatingFromRemote.value = false }, 500)
     }
     return
   }
@@ -92,7 +100,7 @@ function onFullscreenChange() {
   isFullscreen.value = !!document.fullscreenElement
 }
 
-// Keep in sync periodically if viewer
+// Keep in sync periodically if viewer (15s instead of 5s — admin actions are broadcast instantly)
 let syncInterval;
 onMounted(() => {
   if (!isAdmin.value) {
@@ -100,7 +108,7 @@ onMounted(() => {
       if (ws.value?.readyState === WebSocket.OPEN) {
         ws.value.send(JSON.stringify({ type: 'sync_request' }))
       }
-    }, 5000)
+    }, 15000)
   }
   document.addEventListener('fullscreenchange', onFullscreenChange)
 })
@@ -126,6 +134,8 @@ onUnmounted(() => {
       @play="handlePlay"
       @pause="handlePause"
       @seeked="handleSeek"
+      @waiting="isBuffering = true"
+      @canplaythrough="isBuffering = false"
     ></video>
   </div>
 </template>

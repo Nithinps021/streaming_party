@@ -51,16 +51,22 @@ onMounted(async () => {
     isConnected.value = true
   }
   
+  let lastBroadcastTime = 0
+
   ws.value.onmessage = (event) => {
     const data = JSON.parse(event.data)
-    
+
     if (data.type === 'init') {
       roomState.value = data.state
       chatHistory.value = data.chat_history
       isAdmin.value = data.is_admin
     } else if (data.type === 'sync') {
+      // Skip sync poll responses if we received a broadcast recently —
+      // the broadcast already gave us authoritative state
+      if (Date.now() - lastBroadcastTime < 5000) return
       roomState.value = data.state
     } else if (data.type === 'play' || data.type === 'pause' || data.type === 'seek') {
+      lastBroadcastTime = Date.now()
       // Force update state based on admin action
       roomState.value = {
         ...roomState.value,
@@ -190,8 +196,8 @@ onMounted(() => {
         <h2>StreamParty <span v-if="isAdmin" class="badge">Admin</span></h2>
         <span class="room-id">Room: {{ id }}</span>
       </div>
-      <div class="header-actions" style="display: flex; gap: 10px;">
-        <button v-if="isAdmin" class="btn-primary btn-sm" @click="handleAuthClick" style="background: #10b981;">Choose Movie from Drive</button>
+      <div class="header-actions">
+        <button v-if="isAdmin" class="btn-primary btn-sm btn-drive" @click="handleAuthClick">Choose Movie from Drive</button>
         <button class="btn-primary btn-sm" @click="copyLink">Share Link</button>
       </div>
     </header>
@@ -279,6 +285,15 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
+.btn-drive {
+  background: #10b981;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .room-content {
   display: flex;
   flex: 1;
@@ -304,9 +319,28 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
+  .room-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .header-actions button {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+  }
+
   .room-content {
     flex-direction: column;
   }
+  
   .chat-container {
     flex: none;
     height: 400px;
