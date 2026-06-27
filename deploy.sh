@@ -119,12 +119,40 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
+# ============================================================
+# 7. Systemd service for the frontend
+# ============================================================
+log "Creating frontend systemd service..."
+
+# Install serve globally for the streamparty user
+sudo -u "$APP_USER" bash -c "cd $APP_DIR/frontend && npm install -g serve"
+
+cat > /etc/systemd/system/streamparty-frontend.service << EOF
+[Unit]
+Description=StreamParty Frontend
+After=network.target streamparty.service
+
+[Service]
+User=$APP_USER
+Group=$APP_USER
+WorkingDirectory=$APP_DIR/frontend
+Environment="PATH=$APP_DIR/frontend/node_modules/.bin:/usr/bin:/usr/local/bin"
+ExecStart=/usr/bin/npx serve -s dist -l 3000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 # Set permissions
 chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 
 systemctl daemon-reload
 systemctl enable streamparty
+systemctl enable streamparty-frontend
 systemctl start streamparty
+systemctl start streamparty-frontend
 
 # ============================================================
 # Done
@@ -134,11 +162,19 @@ log "========================================="
 log "  StreamParty deployed successfully!"
 log "========================================="
 log ""
-log "  Backend:  http://localhost:8000"
-log "  Status:   systemctl status streamparty"
-log "  Logs:     journalctl -u streamparty -f"
+log "  Backend:   http://localhost:8000"
+log "  Frontend:  http://localhost:3000"
+log ""
+log "  Status:"
+log "    systemctl status streamparty            # backend"
+log "    systemctl status streamparty-frontend   # frontend"
+log ""
+log "  Logs:"
+log "    journalctl -u streamparty -f            # backend logs"
+log "    journalctl -u streamparty-frontend -f   # frontend logs"
 log ""
 log "  Useful commands:"
-log "    sudo systemctl restart streamparty   # restart backend"
-log "    sudo systemctl status redis-server   # check redis"
+log "    sudo systemctl restart streamparty            # restart backend"
+log "    sudo systemctl restart streamparty-frontend   # restart frontend"
+log "    sudo systemctl status redis-server            # check redis"
 log ""
