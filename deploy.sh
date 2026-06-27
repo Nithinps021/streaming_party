@@ -151,8 +151,8 @@ chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 systemctl daemon-reload
 systemctl enable streamparty
 systemctl enable streamparty-frontend
-systemctl start streamparty
-systemctl start streamparty-frontend
+systemctl restart streamparty
+systemctl restart streamparty-frontend
 
 # ============================================================
 # Done
