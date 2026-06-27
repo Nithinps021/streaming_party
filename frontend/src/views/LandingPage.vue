@@ -6,10 +6,12 @@ const router = useRouter()
 const isLoading = ref(false)
 const joinRoomId = ref('')
 
+const API_BASE = import.meta.env.VITE_API_URL || window.location.origin
+
 async function createRoom() {
   isLoading.value = true
   try {
-    const res = await fetch('http://localhost:8000/api/room', { method: 'POST' })
+    const res = await fetch(`${API_BASE}/api/room`, { method: 'POST' })
     if (!res.ok) throw new Error('Failed to create room')
     const data = await res.json()
     

@@ -8,6 +8,9 @@ const props = defineProps({
   id: { type: String, required: true }
 })
 
+const API_BASE = import.meta.env.VITE_API_URL || window.location.origin
+const WS_BASE = API_BASE.replace(/^http/, 'ws')
+
 const router = useRouter()
 const ws = ref(null)
 const isConnected = ref(false)
@@ -28,7 +31,7 @@ provide('username', username)
 onMounted(async () => {
   // Validate room first
   try {
-    const res = await fetch(`http://localhost:8000/api/room/${props.id}`)
+    const res = await fetch(`${API_BASE}/api/room/${props.id}`)
     if (!res.ok) {
       error.value = "Room not found or expired."
       return
@@ -40,7 +43,7 @@ onMounted(async () => {
 
   // Connect WebSocket
   const adminToken = localStorage.getItem(`admin_token_${props.id}`) || ''
-  const wsUrl = `ws://localhost:8000/ws/${props.id}?admin_token=${adminToken}&username=${username.value}`
+  const wsUrl = `${WS_BASE}/ws/${props.id}?admin_token=${adminToken}&username=${username.value}`
   
   ws.value = new WebSocket(wsUrl)
   
@@ -142,7 +145,7 @@ function pickerCallback(data) {
     const doc = data.docs[0];
     const fileId = doc.id;
     // Route through backend proxy which handles Google Drive auth server-side
-    const url = `http://localhost:8000/api/stream/${props.id}/${fileId}`;
+    const url = `${API_BASE}/api/stream/${props.id}/${fileId}`;
 
     // Send video URL + access token so backend can authenticate with Google Drive
     if (ws.value?.readyState === WebSocket.OPEN) {
