@@ -1,15 +1,24 @@
 import json
+import os
 import time
 import redis.asyncio as redis
-from fakeredis.aioredis import FakeRedis
 from typing import Optional, Dict
 
 class RoomManager:
-    def __init__(self, redis_url: str = "redis://localhost"):
-        try:
+    def __init__(self):
+        redis_url = os.environ.get("REDIS_URL")
+        if redis_url:
+            try:
+                self.redis = redis.from_url(redis_url, decode_responses=True)
+                print(f"Using Redis: {redis_url}")
+            except Exception:
+                from fakeredis.aioredis import FakeRedis
+                self.redis = FakeRedis(decode_responses=True)
+                print("Redis connection failed, falling back to FakeRedis (in-memory)")
+        else:
+            from fakeredis.aioredis import FakeRedis
             self.redis = FakeRedis(decode_responses=True)
-        except Exception:
-            pass
+            print("No REDIS_URL set, using FakeRedis (in-memory)")
 
     async def create_room(self, room_id: str) -> None:
         """Create a room with 12 hours expiry."""
@@ -20,7 +29,7 @@ class RoomManager:
             "video_url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" # Mock video source
         }
         await self.redis.setex(
-            f"room:{room_id}", 
+            f"room:{room_id}",
             12 * 60 * 60, # 12 hours in seconds
             json.dumps(room_data)
         )
