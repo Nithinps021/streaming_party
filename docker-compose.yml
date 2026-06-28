@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./backend
+    ports:
+      - "127.0.0.1:8000:8000" # Binds only to the VM's localhost
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: always
+
+  frontend:
+    build: 
+      context: ./frontend
+    ports:
+      - "127.0.0.1:3000:80" # Binds VM's localhost:3000 to container's Nginx port 80
+    depends_on:
+      - backend
+    restart: always
