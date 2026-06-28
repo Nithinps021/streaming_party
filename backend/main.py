@@ -88,7 +88,9 @@ async def stream_video(room_id: str, file_id: str, request: Request):
     if "range" in request.headers:
         headers["Range"] = request.headers["range"]
 
-    client = httpx.AsyncClient(follow_redirects=True, timeout=30.0)
+    # Force IPv4 binding to prevent IPv6 blackholing in Docker which causes ConnectTimeout
+    transport = httpx.AsyncHTTPTransport(local_address="0.0.0.0")
+    client = httpx.AsyncClient(transport=transport, follow_redirects=True, timeout=30.0)
     req = client.build_request("GET", url, headers=headers)
 
     r = await client.send(req, stream=True)
