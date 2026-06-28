@@ -11,8 +11,6 @@ services:
     dns:
       - 8.8.8.8
       - 8.8.4.4
-    sysctls:
-      - net.ipv6.conf.all.disable_ipv6=1
     environment:
       - PYTHONUNBUFFERED=1
       - REDIS_URL=redis://host.docker.internal:6379 # Points to host machine's Redis
