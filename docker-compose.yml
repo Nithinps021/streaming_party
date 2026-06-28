@@ -6,8 +6,11 @@ services:
       context: ./backend
     ports:
       - "127.0.0.1:8000:8000" # Binds only to the VM's localhost
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://host.docker.internal:6379 # Points to host machine's Redis
     restart: always
 
   frontend:
